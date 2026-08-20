@@ -1,8 +1,6 @@
 plugins {
   alias(libs.plugins.android.application)
-  alias(libs.plugins.kotlin.android)
   alias(libs.plugins.kotlin.parcelize)
-  alias(libs.plugins.ksp)
 }
 
 android {
@@ -45,11 +43,6 @@ dependencies {
   implementation(libs.androidx.constraintlayout)
   
   implementation(libs.glide)
-  annotationProcessor(libs.glide.compiler)
-  
-  implementation(libs.room.runtime)
-  implementation(libs.room.ktx)
-  ksp(libs.room.compiler)
 
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)

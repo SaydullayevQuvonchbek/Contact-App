@@ -10,16 +10,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.contactapp.data.AppDatabase
-import com.example.contactapp.data.ContactFetcher
-import com.example.contactapp.data.RecentContactEntity
 import com.example.contactapp.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var db: AppDatabase
+    private var allContacts: List<Contact> = emptyList()
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -36,8 +33,6 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        db = AppDatabase.getDatabase(this)
-
         binding.etSearch.setCompoundDrawablesWithIntrinsicBounds(R.drawable.ic_search, 0, 0, 0)
         binding.fabAdd.setImageResource(R.drawable.ic_add)
 
@@ -51,47 +46,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
-            loadRecentContacts()
-        }
-    }
-
     private fun loadContacts() {
         lifecycleScope.launch {
-            val contacts = ContactFetcher.fetchContacts(this@MainActivity)
-            val adapter = ContactAdapter(contacts) { contact ->
+            allContacts = ContactFetcher.fetchContacts(this@MainActivity)
+            val adapter = ContactAdapter(allContacts) { contact ->
                 openDetails(contact)
             }
             binding.rvContacts.adapter = adapter
             
-            // Also load recents
-            loadRecentContacts()
-        }
-    }
-
-    private fun loadRecentContacts() {
-        lifecycleScope.launch {
-            val recentEntities = db.recentContactDao().getRecentContacts()
-            val recentContacts = recentEntities.map { 
-                Contact(it.id, it.name, it.phone, it.photoUrl, isRecent = true, recentTime = "Yaqinda") 
+            // For UI purposes, take random/first 5 as recent
+            val recentContacts = allContacts.take(5).map { 
+                it.copy(isRecent = true, recentTime = "Yaqinda") 
             }
-            val adapter = RecentAdapter(recentContacts) { contact ->
+            val recentAdapter = RecentAdapter(recentContacts) { contact ->
                 openDetails(contact)
             }
-            binding.rvRecent.adapter = adapter
+            binding.rvRecent.adapter = recentAdapter
         }
     }
 
     private fun openDetails(contact: Contact) {
-        // Save to recent
-        lifecycleScope.launch {
-            db.recentContactDao().insertRecentContact(
-                RecentContactEntity(contact.id, contact.name, contact.phone, contact.photoUrl, System.currentTimeMillis())
-            )
-        }
-
         val intent = Intent(this, ContactDetailsActivity::class.java).apply {
             putExtra("NAME", contact.name)
             putExtra("PHONE", contact.phone)
